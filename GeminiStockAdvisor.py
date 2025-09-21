@@ -29,16 +29,12 @@ class AnalyzedResult:
 
         self.recommendation = recommendation.removeprefix('```html').removesuffix('```')
 
-        match = re.search(r'<h2 class="recommendation">([^<]+)</h2>', self.recommendation)
+        match = re.search(r'RECOMMENDATION: ([^<]+)$', self.recommendation)
 
         if match:
             self.action = match.group(1)
         else:
-            match = re.search(r'RECOMMENDATION: ([^<]+)', self.recommendation)
-            if match:
-                self.action = match.group(1)
-            else:
-                self.action = 'Unknown'
+            self.action = 'Unknown'
 
 class GeminiStockAdvisor:
     def __init__(self, working_dir:Path):
