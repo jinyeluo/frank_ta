@@ -36,7 +36,7 @@ def regex_test():
     file_dir = '/tmp/frank_ta/'
     filenames = ['ARKK_gemini_recommendations.html', 'ARKQ_gemini_recommendations.html',
                  'BABA_gemini_recommendations.html',
-                 'CRWD_gemini_recommendations.html', 'U_gemini_recommendations.html', 'XYZ_gemini_recommendations.html',
+                 'CRWD_gemini_recommendations.html', 'U_gemini_recommendations.html',
                  'DOCS_gemini_recommendations.html', 'EMQQ_gemini_recommendations.html',
                  'LIT_gemini_recommendations.html',
                  'NIO_gemini_recommendations.html', 'PGJ_gemini_recommendations.html',
