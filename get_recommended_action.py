@@ -43,12 +43,11 @@ def regex_test():
                  'QQQ_gemini_recommendations.html',
                  'TSLA_gemini_recommendations.html', 'U_gemini_recommendations.html', 'XYZ_gemini_recommendations.html',
                  'MSTR_gemini_recommendations.html', 'MP_gemini_recommendations.html',
-
+                 'NVDA_gemini_recommendations.html',
                  ]
     for filename in filenames:
         with open("{0}{1}".format(file_dir, filename), 'r') as f:
             html = f.read()
             print(f'{get_recommendation_action(html)} from {filename}')
 
-
-regex_test()
+# regex_test()
