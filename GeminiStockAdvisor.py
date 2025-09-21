@@ -29,12 +29,18 @@ class AnalyzedResult:
 
         self.recommendation = recommendation.removeprefix('```html').removesuffix('```')
 
-        match = re.search(r'RECOMMENDATION: ([^<]+)$', self.recommendation)
+        match = re.search(r'RECOMMENDATION:\s*(.+?)(?=\n|$)', self.recommendation)
 
         if match:
             self.action = match.group(1)
         else:
-            self.action = 'Unknown'
+            pattern = r'<div class="recommendation hold">\s*([A-Z]+)\s*</div>'
+            match = re.search(pattern, self.recommendation, re.DOTALL)
+
+            if match:
+                self.action = match.group(1)
+            else:
+                self.action = 'Unknown'
 
 class GeminiStockAdvisor:
     def __init__(self, working_dir:Path):
@@ -164,7 +170,6 @@ CCI: {latest_data['CCI']:.1f}
                                f"RSI {row['RSI']:.1f},"
                                f"MACD {row['MACD']:.4f}, MACD Signal {row['MACD_Signal']:.4f}, MACD Histogram {row['MACD_Histogram']:.4f} {'(BULLISH)' if row['MACD_Histogram'] > 0 else '(BEARISH)'}\n")
 
-        print(formatted_data)
         return formatted_data
 
     async def get_gemini_recommendation(self, formatted_data):
