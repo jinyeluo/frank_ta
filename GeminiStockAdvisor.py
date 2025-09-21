@@ -15,7 +15,7 @@ import pandas as pd
 from google.genai import Client
 from google.genai.types import GenerateContentConfig
 
-from test_regex import get_recommendation_value
+from get_recommended_action import get_recommendation_action
 
 warnings.filterwarnings('ignore')
 
@@ -30,7 +30,7 @@ class AnalyzedResult:
         self.timestamp = timestamp
 
         self.recommendation = recommendation.removeprefix('```html').removesuffix('```')
-        self.action = get_recommendation_value(self.recommendation)
+        self.action = get_recommendation_action(self.recommendation)
 
         match = re.search(r'RECOMMENDATION:\s*(.+?)(?=\n|$)', self.recommendation, re.DOTALL | re.IGNORECASE)
 

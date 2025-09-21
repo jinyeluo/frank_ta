@@ -1,7 +1,7 @@
 import re
 
 
-def get_recommendation_value(html_string):
+def get_recommendation_action(html_string):
     """
     Most robust extraction that handles various formats:
     - With or without inner span
@@ -10,7 +10,7 @@ def get_recommendation_value(html_string):
     """
 
     # Step 1: Find div with recommendation class
-    div_pattern = r'<div[^>]*class="[^"]*recommendation[^"]*"[^>]*>(.*?)</div>'
+    div_pattern = r'<div[^>]*class="[^"]*recommendation[^"]*"[^>]*>(.*?)(</div>|$|</h3>)'
     div_match = re.search(div_pattern, html_string, re.DOTALL | re.IGNORECASE)
 
     if not div_match:
@@ -41,10 +41,14 @@ def regex_test():
                  'LIT_gemini_recommendations.html',
                  'NIO_gemini_recommendations.html', 'PGJ_gemini_recommendations.html',
                  'QQQ_gemini_recommendations.html',
-                 'TSLA_gemini_recommendations.html', 'U_gemini_recommendations.html', 'XYZ_gemini_recommendations.html']
-    for filename in filenames:
-        with open(file_dir + filename, 'r') as f:
-            html = f.read()
-            print(f'{get_recommendation_value(html)} from {filename}')
+                 'TSLA_gemini_recommendations.html', 'U_gemini_recommendations.html', 'XYZ_gemini_recommendations.html',
+                 'MSTR_gemini_recommendations.html', 'MP_gemini_recommendations.html',
 
-# regex_test()
+                 ]
+    for filename in filenames:
+        with open("{0}{1}".format(file_dir, filename), 'r') as f:
+            html = f.read()
+            print(f'{get_recommendation_action(html)} from {filename}')
+
+
+regex_test()
