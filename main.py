@@ -16,10 +16,10 @@ hidden_frank_ta = Path.home() / '.frank_ta'
 async def main(symbols: List[str], data_dir:Path):
     load_dotenv(hidden_frank_ta / '.env')
 
-    # await yahoo_fetch(symbols, data_dir)
+    await yahoo_fetch(symbols, data_dir)
     results = await gemini_advise(symbols, data_dir)
-    # for k, v in results:
-    #     await send_emails(k, v, data_dir)
+    for k, v in results.items():
+        await send_emails(k, v, data_dir)
 
 async def send_emails(symbol, result:AnalyzedResult, data_dir):
     # Initialize Gmail sender
@@ -31,7 +31,7 @@ async def send_emails(symbol, result:AnalyzedResult, data_dir):
     sender_email = "jinyeluo@gmail.com"  # Replace with your Gmail
     recipient_email = "jinyeluo@gmail.com"  # Replace with recipient
     cur_time = datetime.now()
-    subject = f'{symbol} {cur_time.month}/{cur_time.day}'
+    subject = f'{result.action} {symbol} {cur_time.month}/{cur_time.day}'
 
 
     # File paths and HTML content
@@ -77,7 +77,7 @@ async def gemini_advise(symbols: List[str], working_dir)-> Dict[str, AnalyzedRes
 
 async def yahoo_fetch(symbols: list[str],  working_dir:Path):
     # You can customize these parameters
-    period = '1y'  # Options: '1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max'
+    period = '6mo'  # Options: '1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max'
 
     # Create analyzer
     analyzer = TechnicalAnalyzer(period=period, data_dir=working_dir)
@@ -108,5 +108,5 @@ async def yahoo_fetch(symbols: list[str],  working_dir:Path):
 
 if __name__ == "__main__":
     working_dir = Path('/tmp/frank_ta')
-    stock_symbols = ['QQQ']
+    stock_symbols = ['BABA']
     asyncio.run(main(stock_symbols, working_dir))

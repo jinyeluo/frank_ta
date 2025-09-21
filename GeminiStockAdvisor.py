@@ -4,8 +4,8 @@ Gemini Stock Analysis Advisor
 Sends technical analysis data to Google Gemini for buy/sell/hold recommendations
 """
 import glob
-import json
 import os
+import re
 import warnings
 from datetime import datetime
 from pathlib import Path
@@ -25,9 +25,20 @@ class AnalyzedResult:
         self.symbol = symbol
         self.file = file
         self.current_price = current_price
-        self.recommendation = recommendation
         self.timestamp = timestamp
 
+        self.recommendation = recommendation.removeprefix('```html').removesuffix('```')
+
+        match = re.search(r'<h2 class="recommendation">([^<]+)</h2>', self.recommendation)
+
+        if match:
+            self.action = match.group(1)
+        else:
+            match = re.search(r'RECOMMENDATION: ([^<]+)', self.recommendation)
+            if match:
+                self.action = match.group(1)
+            else:
+                self.action = 'Unknown'
 
 class GeminiStockAdvisor:
     def __init__(self, working_dir:Path):
@@ -40,7 +51,7 @@ class GeminiStockAdvisor:
 
     def find_latest_csv_files(self, symbol):
         """Find the latest technical analysis CSV files"""
-        pattern = os.path.join(self.data_dir, f"{symbol}_technical_analysis_*.csv")
+        pattern = os.path.join(self.data_dir, f"{symbol}_technical_analysis.csv")
 
         files = glob.glob(pattern)
 
@@ -106,8 +117,8 @@ class GeminiStockAdvisor:
         volume_ratio = current_volume / avg_volume_20d if avg_volume_20d > 0 else 1
 
         # Trend analysis
+        sma_5_trend = "UP" if latest_data['Close'] > latest_data['SMA_5'] else "DOWN"
         sma_20_trend = "UP" if latest_data['Close'] > latest_data['SMA_20'] else "DOWN"
-        sma_50_trend = "UP" if latest_data['Close'] > latest_data['SMA_50'] else "DOWN"
 
         # Bollinger Bands position
         bb_position = ((latest_data['Close'] - latest_data['BB_Lower']) /
@@ -125,8 +136,8 @@ Daily Low: ${latest_data['Low']:.2f}
 Volume: {int(current_volume):,} (Ratio to 20d avg: {volume_ratio:.2f}x)
 
 === MOVING AVERAGES ===
+SMA 5: ${latest_data['SMA_5']:.2f} (Price is {sma_5_trend})
 SMA 20: ${latest_data['SMA_20']:.2f} (Price is {sma_20_trend})
-SMA 50: ${latest_data['SMA_50']:.2f} (Price is {sma_50_trend})
 EMA 12: ${latest_data['EMA_12']:.2f}
 EMA 26: ${latest_data['EMA_26']:.2f}
 
@@ -147,12 +158,15 @@ Stochastic %D: {latest_data['Stoch_D']:.1f}
 Williams %R: {latest_data['Williams_R']:.1f} {'(OVERBOUGHT)' if latest_data['Williams_R'] > -20 else '(OVERSOLD)' if latest_data['Williams_R'] < -80 else '(NEUTRAL)'}
 CCI: {latest_data['CCI']:.1f}
 
-=== RECENT PRICE TREND (Last 5 Days) ===
+=== RECENT PRICE TREND (Last 90 Days) ===
 """
 
         # Add recent price trend
-        for i, (date, row) in enumerate(recent_data.iterrows()):
-            formatted_data += f"Day {i + 1} ({date.strftime('%Y-%m-%d')}): Close ${row['Close']:.2f}, RSI {row['RSI']:.1f}\n"
+        last_90_data = full_data.tail(90)
+        for i, (date, row) in enumerate(last_90_data.iterrows()):
+            formatted_data += (f"Day {i + 1} ({date.strftime('%Y-%m-%d')}): Close ${row['Close']:.2f}, "
+                               f"RSI {row['RSI']:.1f},"
+                               f"MACD {row['MACD']:.4f}, MACD Signal {row['MACD_Signal']:.4f}, MACD Histogram {row['MACD_Histogram']:.4f} {'(BULLISH)' if row['MACD_Histogram'] > 0 else '(BEARISH)'}\n")
 
         print(formatted_data)
         return formatted_data
@@ -217,7 +231,7 @@ Make your answer in html format so that I can email it
             file= csv_file,
             current_price= latest_data['Close'],
             recommendation= recommendation,
-            timestamp= datetime.now().isoformat()        )
+            timestamp=datetime.now().isoformat())
 
         return result
 
@@ -261,11 +275,11 @@ Make your answer in html format so that I can email it
 
         for k, v in results.items():
             output_file = os.path.join(self.data_dir,
-                                       f"gemini_recommendations_{k}.json")
+                                       f"{k}_gemini_recommendations.html")
 
             try:
                 with open(output_file, 'w') as f:
-                    json.dump(v, f, indent=2)
+                    f.write(v.recommendation)
 
                 print(f"\nRecommendations saved to: {output_file}")
 
