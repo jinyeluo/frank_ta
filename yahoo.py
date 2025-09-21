@@ -118,14 +118,6 @@ class TechnicalAnalyzer:
 
         return atr
 
-    def calculate_williams_r(self, high, low, close, window=14):
-        """Calculate Williams %R"""
-        highest_high = high.rolling(window=window).max()
-        lowest_low = low.rolling(window=window).min()
-        williams_r = -100 * ((highest_high - close) / (highest_high - lowest_low))
-
-        return williams_r
-
     def calculate_cci(self, high, low, close, window=20):
         """Calculate Commodity Channel Index"""
         typical_price = (high + low + close) / 3
@@ -169,9 +161,6 @@ class TechnicalAnalyzer:
 
         # ATR
         df['ATR'] = self.calculate_atr(df['High'], df['Low'], df['Close'])
-
-        # Williams %R
-        df['Williams_R'] = self.calculate_williams_r(df['High'], df['Low'], df['Close'])
 
         # CCI
         df['CCI'] = self.calculate_cci(df['High'], df['Low'], df['Close'])
@@ -251,75 +240,64 @@ class TechnicalAnalyzer:
         ax2.legend(loc='upper left', fontsize=10)
         ax2.grid(True, alpha=0.3)
 
-        # 3. RSI Chart
+        # 3. ATR and CCI Chart
         ax3 = fig.add_subplot(gs[2])
-
-        ax3.plot(x_indices, data['RSI'], color='purple', linewidth=2, label='RSI (14)')
-        ax3.axhline(y=70, color='red', linestyle='--', alpha=0.7, label='Overbought (70)')
-        ax3.axhline(y=30, color='green', linestyle='--', alpha=0.7, label='Oversold (30)')
-        ax3.fill_between(x_indices, 70, 100, alpha=0.1, color='red')
-        ax3.fill_between(x_indices, 0, 30, alpha=0.1, color='green')
-
-        ax3.set_ylabel('RSI', fontsize=12)
-        ax3.set_ylim(0, 100)
+        ax3.plot(x_indices, data['ATR'], color='orange', linewidth=2, label='ATR (14)')
+        ax3.set_ylabel('ATR', fontsize=12, color='orange')
+        ax3.tick_params(axis='y', labelcolor='orange')
         ax3.legend(loc='upper left', fontsize=10)
         ax3.grid(True, alpha=0.3)
 
-        # 4. MACD Chart
+        ax3_twin = ax3.twinx()
+        ax3_twin.plot(x_indices, data['CCI'], color='purple', linewidth=2, label='CCI (20)')
+        ax3_twin.set_ylabel('CCI', fontsize=12, color='purple')
+        ax3_twin.tick_params(axis='y', labelcolor='purple')
+        ax3_twin.axhline(y=100, color='red', linestyle='--', alpha=0.7, label='Overbought (100)')
+        ax3_twin.axhline(y=-100, color='green', linestyle='--', alpha=0.7, label='Oversold (-100)')
+        ax3_twin.legend(loc='upper right', fontsize=10)
+
+        # 4. RSI Chart
         ax4 = fig.add_subplot(gs[3])
 
-        ax4.plot(x_indices, data['MACD'], color='blue', linewidth=2, label='MACD')
-        ax4.plot(x_indices, data['MACD_Signal'], color='red', linewidth=2, label='Signal')
+        ax4.plot(x_indices, data['RSI'], color='purple', linewidth=2, label='RSI (14)')
+        ax4.axhline(y=70, color='red', linestyle='--', alpha=0.7, label='Overbought (70)')
+        ax4.axhline(y=30, color='green', linestyle='--', alpha=0.7, label='Oversold (30)')
+        ax4.fill_between(x_indices, 70, 100, alpha=0.1, color='red')
+        ax4.fill_between(x_indices, 0, 30, alpha=0.1, color='green')
 
-        # MACD Histogram
-        colors = ['green' if val >= 0 else 'red' for val in data['MACD_Histogram']]
-        ax4.bar(x_indices, data['MACD_Histogram'], color=colors, alpha=0.6, width=0.8, label='Histogram')
-        ax4.axhline(y=0, color='black', linestyle='-', alpha=0.5)
-
-        ax4.set_ylabel('MACD', fontsize=12)
+        ax4.set_ylabel('RSI', fontsize=12)
+        ax4.set_ylim(0, 100)
         ax4.legend(loc='upper left', fontsize=10)
         ax4.grid(True, alpha=0.3)
 
-        # 5. Stochastic Oscillator
+        # 5. MACD Chart
         ax5 = fig.add_subplot(gs[4])
 
-        ax5.plot(x_indices, data['Stoch_K'], color='blue', linewidth=2, label='%K')
-        ax5.plot(x_indices, data['Stoch_D'], color='red', linewidth=2, label='%D')
-        ax5.axhline(y=80, color='red', linestyle='--', alpha=0.7, label='Overbought (80)')
-        ax5.axhline(y=20, color='green', linestyle='--', alpha=0.7, label='Oversold (20)')
-        ax5.fill_between(x_indices, 80, 100, alpha=0.1, color='red')
-        ax5.fill_between(x_indices, 0, 20, alpha=0.1, color='green')
+        ax5.plot(x_indices, data['MACD'], color='blue', linewidth=2, label='MACD')
+        ax5.plot(x_indices, data['MACD_Signal'], color='red', linewidth=2, label='Signal')
 
-        ax5.set_ylabel('Stochastic', fontsize=12)
-        ax5.set_ylim(0, 100)
+        # MACD Histogram
+        colors = ['green' if val >= 0 else 'red' for val in data['MACD_Histogram']]
+        ax5.bar(x_indices, data['MACD_Histogram'], color=colors, alpha=0.6, width=0.8, label='Histogram')
+        ax5.axhline(y=0, color='black', linestyle='-', alpha=0.5)
+
+        ax5.set_ylabel('MACD', fontsize=12)
         ax5.legend(loc='upper left', fontsize=10)
         ax5.grid(True, alpha=0.3)
 
-        # 6. Additional Indicators
+        # 6. Stochastic Oscillator
         ax6 = fig.add_subplot(gs[5])
 
-        # Create twin axes for different scales
-        ax6_twin = ax6.twinx()
+        ax6.plot(x_indices, data['Stoch_K'], color='blue', linewidth=2, label='%K')
+        ax6.plot(x_indices, data['Stoch_D'], color='red', linewidth=2, label='%D')
+        ax6.axhline(y=80, color='red', linestyle='--', alpha=0.7, label='Overbought (80)')
+        ax6.axhline(y=20, color='green', linestyle='--', alpha=0.7, label='Oversold (20)')
+        ax6.fill_between(x_indices, 80, 100, alpha=0.1, color='red')
+        ax6.fill_between(x_indices, 0, 20, alpha=0.1, color='green')
 
-        # Williams %R (left axis)
-        ax6.plot(x_indices, data['Williams_R'], color='purple', linewidth=2, label='Williams %R')
-        ax6.axhline(y=-20, color='red', linestyle='--', alpha=0.7)
-        ax6.axhline(y=-80, color='green', linestyle='--', alpha=0.7)
-        ax6.fill_between(x_indices, -20, 0, alpha=0.1, color='red')
-        ax6.fill_between(x_indices, -100, -80, alpha=0.1, color='green')
-        ax6.set_ylabel('Williams %R', fontsize=12, color='purple')
-        ax6.set_ylim(-100, 0)
-        ax6.tick_params(axis='y', labelcolor='purple')
-
-        # ATR (right axis) - normalized to fit scale
-        atr_normalized = (data['ATR'] / data['ATR'].max()) * 50 - 25  # Scale to -25 to 25
-        ax6_twin.plot(x_indices, atr_normalized, color='orange', linewidth=2, label='ATR (normalized)', alpha=0.7)
-        ax6_twin.set_ylabel('ATR (normalized)', fontsize=12, color='orange')
-        ax6_twin.tick_params(axis='y', labelcolor='orange')
-
-        # Add legends
+        ax6.set_ylabel('Stochastic', fontsize=12)
+        ax6.set_ylim(0, 100)
         ax6.legend(loc='upper left', fontsize=10)
-        ax6_twin.legend(loc='upper right', fontsize=10)
         ax6.grid(True, alpha=0.3)
 
         # Format x-axis for all subplots
@@ -364,7 +342,6 @@ class TechnicalAnalyzer:
         data[numeric_columns] = data[numeric_columns].round(4)
 
         data.to_csv(filepath)
-        print(f"✓ Saved {symbol} data to {filepath}")
         return chart_filepath
 
     def save_to_csv(self, data, symbol):
@@ -398,7 +375,6 @@ class TechnicalAnalyzer:
             'BB_Position': ((latest_data['Close'] - latest_data['BB_Lower']) /
                             (latest_data['BB_Upper'] - latest_data['BB_Lower'])) * 100,
             'ATR': latest_data['ATR'],
-            'Williams_R': latest_data['Williams_R'],
             '20_Day_Change_%': ((latest_data['Close'] / data['Close'].iloc[-21]) - 1) * 100 if len(
                 data) > 20 else np.nan
         }

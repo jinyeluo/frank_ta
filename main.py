@@ -108,5 +108,10 @@ async def yahoo_fetch(symbols: list[str],  working_dir:Path):
 
 if __name__ == "__main__":
     working_dir = Path('/tmp/frank_ta')
-    stock_symbols = ['BABA']
+    stock_symbols_account_1 = ['ARKK', 'CRWD', 'DOCS', 'EMQQ', 'LIT', 'PGJ', 'NIO', 'XYZ']
+    stock_symbols_account_2 = ['ARKQ', 'BABA', 'TSLA', 'QQQ', 'U', 'OPFI']
+
+    stock_symbols = stock_symbols_account_1
+    stock_symbols.extend(stock_symbols_account_2)
     asyncio.run(main(stock_symbols, working_dir))
+

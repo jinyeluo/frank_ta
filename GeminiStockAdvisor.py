@@ -127,49 +127,45 @@ class GeminiStockAdvisor:
                        (latest_data['BB_Upper'] - latest_data['BB_Lower'])) * 100
 
         formatted_data = f"""
-TECHNICAL ANALYSIS DATA FOR {symbol}
+# TECHNICAL ANALYSIS DATA FOR {symbol}
 
-=== CURRENT PRICE DATA ===
-Current Price: ${latest_data['Close']:.2f}
-1-Day Change: {price_change_1d:.2f}%
-5-Day Change: {price_change_5d:.2f}%
-Daily High: ${latest_data['High']:.2f}
-Daily Low: ${latest_data['Low']:.2f}
-Volume: {int(current_volume):,} (Ratio to 20d avg: {volume_ratio:.2f}x)
+## === CURRENT PRICE DATA ===
+* Current Price: ${latest_data['Close']:.2f}
+* 1-Day Change: {price_change_1d:.2f}%
+* 5-Day Change: {price_change_5d:.2f}%
+* Daily High: ${latest_data['High']:.2f}
+* Daily Low: ${latest_data['Low']:.2f}
+* Volume: {int(current_volume):,} (Ratio to 20d avg: {volume_ratio:.2f}x)
 
-=== MOVING AVERAGES ===
-SMA 5: ${latest_data['SMA_5']:.2f} (Price is {sma_5_trend})
-SMA 20: ${latest_data['SMA_20']:.2f} (Price is {sma_20_trend})
-EMA 12: ${latest_data['EMA_12']:.2f}
-EMA 26: ${latest_data['EMA_26']:.2f}
+## === MOVING AVERAGES ===
+* SMA 5: ${latest_data['SMA_5']:.2f} (Price is {sma_5_trend})
+* SMA 20: ${latest_data['SMA_20']:.2f} (Price is {sma_20_trend})
+* EMA 12: ${latest_data['EMA_12']:.2f}
+* EMA 26: ${latest_data['EMA_26']:.2f}
 
-=== MOMENTUM INDICATORS ===
-RSI (14): {latest_data['RSI']:.1f} {'(OVERBOUGHT)' if latest_data['RSI'] > 70 else '(OVERSOLD)' if latest_data['RSI'] < 30 else '(NEUTRAL)'}
-MACD: {latest_data['MACD']:.4f}
-MACD Signal: {latest_data['MACD_Signal']:.4f}
-MACD Histogram: {latest_data['MACD_Histogram']:.4f} {'(BULLISH)' if latest_data['MACD_Histogram'] > 0 else '(BEARISH)'}
+## === VOLATILITY & BANDS ===
+* Bollinger Bands - Upper: ${latest_data['BB_Upper']:.2f}, Lower: ${latest_data['BB_Lower']:.2f}
 
-=== VOLATILITY & BANDS ===
-Bollinger Bands - Upper: ${latest_data['BB_Upper']:.2f}, Lower: ${latest_data['BB_Lower']:.2f}
-BB Position: {bb_position:.1f}% {'(Near Upper Band)' if bb_position > 80 else '(Near Lower Band)' if bb_position < 20 else '(Middle Range)'}
-ATR (14): {latest_data['ATR']:.2f} (Volatility measure)
-
-=== OSCILLATORS ===
-Stochastic %K: {latest_data['Stoch_K']:.1f}
-Stochastic %D: {latest_data['Stoch_D']:.1f}
-Williams %R: {latest_data['Williams_R']:.1f} {'(OVERBOUGHT)' if latest_data['Williams_R'] > -20 else '(OVERSOLD)' if latest_data['Williams_R'] < -80 else '(NEUTRAL)'}
-CCI: {latest_data['CCI']:.1f}
-
-=== RECENT PRICE TREND (Last 90 Days) ===
+## === RECENT PRICE TREND/TECH INDICATORS (Last 90 Days) ===
 """
 
-        # Add recent price trend
-        last_90_data = full_data.tail(90)
-        for i, (date, row) in enumerate(last_90_data.iterrows()):
-            formatted_data += (f"Day {i + 1} ({date.strftime('%Y-%m-%d')}): Close ${row['Close']:.2f}, "
-                               f"RSI {row['RSI']:.1f},"
-                               f"MACD {row['MACD']:.4f}, MACD Signal {row['MACD_Signal']:.4f}, MACD Histogram {row['MACD_Histogram']:.4f} {'(BULLISH)' if row['MACD_Histogram'] > 0 else '(BEARISH)'}\n")
+        # Add recent price trend in a markdown table
+        last_90_data = full_data.tail(90).copy()
+        # Calculate BB Position for the last 90 days
+        last_90_data['BB_Position'] = ((last_90_data['Close'] - last_90_data['BB_Lower']) /
+                                       (last_90_data['BB_Upper'] - last_90_data['BB_Lower'])) * 100
 
+        formatted_data += "| Day | Date       | Close  | RSI  | MACD Hist | BB Pos | ATR    | Stoch K | Stoch D | CCI    | Volume      |\n"
+        formatted_data += "|-----|------------|--------|------|-----------|--------|--------|---------|---------|--------|-------------|\n"
+        for i, (date, row) in enumerate(last_90_data.iterrows()):
+            trend = 'BULLISH' if row['MACD_Histogram'] > 0 else 'BEARISH'
+            formatted_data += (f"| {i + 1:<3} | {date.strftime('%Y-%m-%d')} |"
+                               f" ${row['Close']:<6.2f} | {row['RSI']:<4.1f} |"
+                               f" {row['MACD_Histogram']:<9.4f} {trend:<7} | "
+                               f" {row['BB_Position']:<6.1f}% | {row['ATR']:<6.4f} |"
+                               f" {row['Stoch_K']:<7.1f} | {row['Stoch_D']:<7.1f} |"
+                               f" {row['CCI']:<6.1f} | {row['Volume']:<11,} |\n")
+        print(formatted_data)
         return formatted_data
 
     async def get_gemini_recommendation(self, formatted_data):
@@ -193,7 +189,6 @@ Keep your analysis concise but thorough. Focus on the technical indicators provi
 
 Make your answer in html format so that I can email it
 """
-
         try:
 
             # Configure Gemini
@@ -201,7 +196,7 @@ Make your answer in html format so that I can email it
             config = GenerateContentConfig(
                 seed=197,  # give it an odd number to cut down varieties of responses
                 system_instruction=self.system_prompt,
-                temperature=0)
+                temperature=0)  # ignore
             response = await gemini_client.aio.models.generate_content(
                 model=GEMINI_PRO, contents=prompt, config=config)
 
