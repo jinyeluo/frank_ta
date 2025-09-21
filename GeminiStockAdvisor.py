@@ -15,6 +15,8 @@ import pandas as pd
 from google.genai import Client
 from google.genai.types import GenerateContentConfig
 
+from test_regex import get_recommendation_value
+
 warnings.filterwarnings('ignore')
 
 GEMINI_FLASH = "gemini-2.5-flash"
@@ -28,19 +30,27 @@ class AnalyzedResult:
         self.timestamp = timestamp
 
         self.recommendation = recommendation.removeprefix('```html').removesuffix('```')
+        self.action = get_recommendation_value(self.recommendation)
 
-        match = re.search(r'RECOMMENDATION:\s*(.+?)(?=\n|$)', self.recommendation)
+        match = re.search(r'RECOMMENDATION:\s*(.+?)(?=\n|$)', self.recommendation, re.DOTALL | re.IGNORECASE)
 
         if match:
             self.action = match.group(1)
         else:
             pattern = r'<div class="recommendation hold">\s*([A-Z]+)\s*</div>'
-            match = re.search(pattern, self.recommendation, re.DOTALL)
+            match = re.search(pattern, self.recommendation, re.DOTALL | re.IGNORECASE)
 
             if match:
                 self.action = match.group(1)
             else:
-                self.action = 'Unknown'
+                pattern = r'<td>Recommendation:</td>\s*<td><strong>([^<]+)</strong></td>'
+                match = re.search(pattern, self.recommendation, re.DOTALL | re.IGNORECASE)
+
+                if match:
+                    result = match.group(1)
+                    print(result)  # "BUY
+                else:
+                    self.action = 'Unknown'
 
 class GeminiStockAdvisor:
     def __init__(self, working_dir:Path):
@@ -155,8 +165,10 @@ class GeminiStockAdvisor:
         last_90_data['BB_Position'] = ((last_90_data['Close'] - last_90_data['BB_Lower']) /
                                        (last_90_data['BB_Upper'] - last_90_data['BB_Lower'])) * 100
 
-        formatted_data += "| Day | Date       | Close  | RSI  | MACD Hist | BB Pos | ATR    | Stoch K | Stoch D | CCI    | Volume      |\n"
-        formatted_data += "|-----|------------|--------|------|-----------|--------|--------|---------|---------|--------|-------------|\n"
+        formatted_data += "| Day | Date       | Close   | RSI  | MACD Hist         | BB Pos  | ATR      | Stoch K  | Stoch D  | CCI      | Volume      |\n"
+        formatted_data += "|-----|------------|---------|------|-------------------|---------|----------|----------|----------|----------|-------------|\n"
+
+
         for i, (date, row) in enumerate(last_90_data.iterrows()):
             trend = 'BULLISH' if row['MACD_Histogram'] > 0 else 'BEARISH'
             formatted_data += (f"| {i + 1:<3} | {date.strftime('%Y-%m-%d')} |"
