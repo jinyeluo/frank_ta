@@ -286,7 +286,7 @@ Make your answer in html format so that I can email it
                                        f"{k}_gemini_recommendations.html")
 
             try:
-                with open(output_file, 'w') as f:
+                with open(output_file, 'w', encoding='utf-8') as f:
                     f.write(v.recommendation)
 
                 print(f"\nRecommendations saved to: {output_file}")
