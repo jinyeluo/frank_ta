@@ -1,10 +1,12 @@
 import base64
 import mimetypes
 import os
+from datetime import datetime
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from pathlib import Path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -136,7 +138,19 @@ class GmailSender:
             return sent_message
 
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"An error occurred when sending email: {subject} : {e}")
             return None
 
 
+def test_email():
+    hidden_frank_ta = Path.home() / '.frank_ta'
+    secret_file = hidden_frank_ta / 'google_client_secret.json'
+    token_file = hidden_frank_ta / 'google_client_token.json'
+    gmail = GmailSender(str(secret_file), str(token_file))
+    cur_time = datetime.now()
+    subject = f'test Baba {cur_time.month}/{cur_time.day}'
+    working_dir = Path('/tmp/frank_ta')
+    gmail.send_email("none@gmail.com", "none@gmail.com", subject, working_dir / 'CRWD_technical_chart.png',
+                     "this is a test")
+
+# test_email()
