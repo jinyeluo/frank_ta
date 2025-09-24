@@ -1,4 +1,5 @@
 import asyncio
+import glob
 import os
 from datetime import datetime
 from pathlib import Path
@@ -8,18 +9,33 @@ from dotenv import load_dotenv
 
 from GeminiStockAdvisor import GeminiStockAdvisor, AnalyzedResult
 from GmailSender import GmailSender
+from get_recommended_action import print_summary
 from yahoo import TechnicalAnalyzer
 
 hidden_frank_ta = Path.home() / '.frank_ta'
 
 
+def delete_all_files(directory):
+    pattern = os.path.join(directory, "*")
+    files = glob.glob(pattern)
+
+    for file_path in files:
+        if os.path.isfile(file_path):  # Only delete files, not directories
+            os.remove(file_path)
+            print(f"Deleted: {file_path}")
+
+
 async def main(symbols: List[str], data_dir:Path):
+    delete_all_files(data_dir)
+
     load_dotenv(hidden_frank_ta / '.env')
 
     await yahoo_fetch(symbols, data_dir)
     results = await gemini_advise(symbols, data_dir)
-    for k, v in results.items():
-        await send_emails(k, v, data_dir)
+    print_summary(data_dir)
+
+    # for k, v in results.items():
+    #     await send_emails(k, v, data_dir)
 
 async def send_emails(symbol, result:AnalyzedResult, data_dir):
     # Initialize Gmail sender
@@ -28,8 +44,8 @@ async def send_emails(symbol, result:AnalyzedResult, data_dir):
     gmail = GmailSender(str(secret_file), str(token_file))
 
     # Email details
-    sender_email = "jinyeluo@gmail.com"  # Replace with your Gmail
-    recipient_email = "jinyeluo@gmail.com"  # Replace with recipient
+    sender_email = "none@gmail.com"  # Replace with your Gmail
+    recipient_email = "none@gmail.com"  # Replace with recipient
     cur_time = datetime.now()
     subject = f'{result.action} {symbol} {cur_time.month}/{cur_time.day}'
 
@@ -110,8 +126,12 @@ if __name__ == "__main__":
     working_dir = Path('/tmp/frank_ta')
     stock_symbols_account_1 = ['ARKK', 'CRWD', 'DOCS', 'EMQQ', 'LIT', 'PGJ', 'NIO', 'XYZ']
     stock_symbols_account_2 = ['ARKQ', 'BABA', 'TSLA', 'QQQ', 'U', 'OPFI']
+    stock_symbols_account_3 = ['MTZ', 'KWEB', 'CQQQ', 'MP', 'MSTR', 'NVDA']
 
     stock_symbols = stock_symbols_account_1
     stock_symbols.extend(stock_symbols_account_2)
+    stock_symbols.extend(stock_symbols_account_3)
+
+    # stock_symbols = ['ARKK', 'CRWD', 'DOCS', 'EMQQ', 'LIT', 'BABA']
     asyncio.run(main(stock_symbols, working_dir))
 

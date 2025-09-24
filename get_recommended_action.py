@@ -1,4 +1,7 @@
+import glob
+import os
 import re
+from pathlib import Path
 
 
 def get_recommendation_action(html_string):
@@ -8,6 +11,17 @@ def get_recommendation_action(html_string):
     - Different class combinations
     - Case insensitive matching
     """
+    if 'recommendation buy' in html_string:
+        return 'BUY'
+    elif 'recommendation hold' in html_string:
+        return 'HOLD'
+    elif 'recommendation sell' in html_string:
+        return 'SELL'
+
+    pattern = r'RECOMMENDATION: (.*?)>(HOLD|BUY|SELL)<'
+    match = re.match(pattern, html_string)
+    if match:
+        return match[2]
 
     # Step 1: Find div with recommendation class
     div_pattern = r'<div[^>]*class="[^"]*recommendation[^"]*"[^>]*>(.*?)(</div>|$|</h3>)'
@@ -32,22 +46,15 @@ def get_recommendation_action(html_string):
     return 'Unknown'
 
 
-def regex_test():
-    file_dir = '/tmp/frank_ta/'
-    filenames = ['ARKK_gemini_recommendations.html', 'ARKQ_gemini_recommendations.html',
-                 'BABA_gemini_recommendations.html',
-                 'CRWD_gemini_recommendations.html', 'U_gemini_recommendations.html',
-                 'DOCS_gemini_recommendations.html', 'EMQQ_gemini_recommendations.html',
-                 'LIT_gemini_recommendations.html',
-                 'NIO_gemini_recommendations.html', 'PGJ_gemini_recommendations.html',
-                 'QQQ_gemini_recommendations.html',
-                 'TSLA_gemini_recommendations.html', 'U_gemini_recommendations.html', 'XYZ_gemini_recommendations.html',
-                 'MSTR_gemini_recommendations.html', 'MP_gemini_recommendations.html',
-                 'NVDA_gemini_recommendations.html',
-                 ]
-    for filename in filenames:
-        with open("{0}{1}".format(file_dir, filename), 'r') as f:
-            html = f.read()
-            print(f'{get_recommendation_action(html)} from {filename}')
+def print_summary(file_dir: Path):
+    pattern = os.path.join(file_dir, "*_gemini_recommendations.html")
+    matching_files = glob.glob(pattern)
 
-# regex_test()
+    with open(file_dir / 'summary.txt', 'w', encoding='utf-8') as summary:
+        for filename in matching_files:
+            with open(filename, 'r', encoding='utf-8') as f:
+                html = f.read()
+                content = f'{get_recommendation_action(html)} from {filename}'
+                print(content)
+                summary.write(content)
+                summary.write("\n")

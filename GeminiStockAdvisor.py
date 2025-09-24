@@ -177,7 +177,7 @@ class GeminiStockAdvisor:
                                f" {row['BB_Position']:<6.1f}% | {row['ATR']:<6.4f} |"
                                f" {row['Stoch_K']:<7.1f} | {row['Stoch_D']:<7.1f} |"
                                f" {row['CCI']:<6.1f} | {row['Volume']:<11,} |\n")
-        print(formatted_data)
+        # print(formatted_data)
         return formatted_data
 
     async def get_gemini_recommendation(self, formatted_data):
