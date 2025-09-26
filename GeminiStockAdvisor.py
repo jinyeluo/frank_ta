@@ -272,7 +272,7 @@ Make your answer in html format so that I can email it
                     # print("\n" + "=" * 60)
 
                     # Save results if requested
-                    self.save_recommendation(results)
+                    self.save_recommendation(result.symbol, result)
 
             except Exception as e:
                 print(f"Error analyzing {csv_file}: {str(e)}")
