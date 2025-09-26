@@ -267,29 +267,27 @@ Make your answer in html format so that I can email it
 
                     # Print the recommendation
                     print(f"\n{result.symbol}: ${result.current_price:.2f}")
-                    print("=" * 60)
-                    print(result.recommendation)
-                    print("\n" + "=" * 60)
+                    # print("=" * 60)
+                    # print(result.recommendation)
+                    # print("\n" + "=" * 60)
+
+                    # Save results if requested
+                    self.save_recommendation(results)
 
             except Exception as e:
                 print(f"Error analyzing {csv_file}: {str(e)}")
 
         return results
 
-    def save_recommendations(self, results: Dict[str, AnalyzedResult]):
-        """Save recommendations to a file"""
-        if not results:
-            return
+    def save_recommendation(self, ticket: str, html_result: AnalyzedResult):
+        output_file = os.path.join(self.data_dir,
+                                   f"{ticket}_gemini_recommendations.html")
 
-        for k, v in results.items():
-            output_file = os.path.join(self.data_dir,
-                                       f"{k}_gemini_recommendations.html")
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(html_result.recommendation)
 
-            try:
-                with open(output_file, 'w', encoding='utf-8') as f:
-                    f.write(v.recommendation)
+            print(f"\nRecommendations saved to: {output_file}")
 
-                print(f"\nRecommendations saved to: {output_file}")
-
-            except Exception as e:
-                print(f"Error saving recommendations: {str(e)}")
+        except Exception as e:
+            print(f"Error saving recommendations: {str(e)}")
