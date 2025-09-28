@@ -130,6 +130,13 @@ class TechnicalAnalyzer:
 
         return cci
 
+    def calculate_obv(self, data):
+        """Calculate On-Balance Volume (OBV)"""
+        price_diff = data['Close'].diff()
+        flow = data['Volume'] * np.sign(price_diff)
+        obv = flow.cumsum().fillna(0)
+        return obv
+
     def add_technical_indicators(self, data, symbol):
         """Add all technical indicators to the dataframe"""
         df = data.copy()
@@ -169,6 +176,9 @@ class TechnicalAnalyzer:
         # CCI
         df['CCI'] = self.calculate_cci(df['High'], df['Low'], df['Close'])
 
+        # OBV
+        df['OBV'] = self.calculate_obv(df)
+
         # Volume indicators
         df['Volume_SMA_20'] = self.calculate_sma(df['Volume'], 20)
 
@@ -184,47 +194,31 @@ class TechnicalAnalyzer:
         print(f"Creating chart for {symbol}...")
 
         # Set up the figure with subplots
-        fig = plt.figure(figsize=(16, 20))
-        gs = GridSpec(6, 1, height_ratios=[3, 1, 1, 1, 1, 1], hspace=0.3)
+        fig = plt.figure(figsize=(16, 22))  # Increased height for the new chart
+        gs = GridSpec(7, 1, height_ratios=[3, 1, 1, 1, 1, 1, 1], hspace=0)
 
         # Convert index to datetime if it isn't already
         if not isinstance(data.index, pd.DatetimeIndex):
             data.index = pd.to_datetime(data.index)
 
-        # 1. Price Chart with Moving Averages and Bollinger Bands
-        ax1 = fig.add_subplot(gs[0])
-
         x_indices = np.arange(len(data.index))
 
-        # Candlestick-style price plot
+        # 1. Price Chart
+        ax1 = fig.add_subplot(gs[0])
         for i in range(len(data)):
-            open_price = data['Open'].iloc[i]
-            close_price = data['Close'].iloc[i]
-            high_price = data['High'].iloc[i]
-            low_price = data['Low'].iloc[i]
-
-            # Color based on price movement
+            open_price, close_price = data['Open'].iloc[i], data['Close'].iloc[i]
+            high_price, low_price = data['High'].iloc[i], data['Low'].iloc[i]
             color = 'green' if close_price >= open_price else 'red'
-
-            # Draw the high-low line
             ax1.plot([x_indices[i], x_indices[i]], [low_price, high_price], color='black', linewidth=0.5, alpha=0.7)
-
-            # Draw the open-close rectangle
-            height = abs(close_price - open_price)
-            bottom = min(open_price, close_price)
-            ax1.bar(x_indices[i], height, bottom=bottom, width=0.8, color=color, alpha=0.7)
-
-        # Add moving averages
+            ax1.bar(x_indices[i], abs(close_price - open_price), bottom=min(open_price, close_price), width=0.8,
+                    color=color, alpha=0.7)
         ax1.plot(x_indices, data['SMA_5'], label='SMA 5', color='orange', linewidth=2)
         ax1.plot(x_indices, data['SMA_20'], label='SMA 20', color='blue', linewidth=2)
-
-        # Add Bollinger Bands
         ax1.fill_between(x_indices, data['BB_Upper'], data['BB_Lower'], alpha=0.1, color='gray',
                          label='Bollinger Bands')
         ax1.plot(x_indices, data['BB_Upper'], color='gray', linewidth=1, alpha=0.7)
         ax1.plot(x_indices, data['BB_Middle'], color='gray', linewidth=1, alpha=0.7)
         ax1.plot(x_indices, data['BB_Lower'], color='gray', linewidth=1, alpha=0.7)
-
         ax1.set_title(f'{symbol} - Technical Analysis Chart', fontsize=16, fontweight='bold')
         ax1.set_ylabel('Price ($)', fontsize=12)
         ax1.legend(loc='upper left', fontsize=10)
@@ -232,95 +226,87 @@ class TechnicalAnalyzer:
 
         # 2. Volume Chart
         ax2 = fig.add_subplot(gs[1])
-
-        # Color volume bars based on price movement
-        volume_colors = ['green' if data['Close'].iloc[i] >= data['Open'].iloc[i] else 'red'
-                         for i in range(len(data))]
-
+        volume_colors = ['green' if data['Close'].iloc[i] >= data['Open'].iloc[i] else 'red' for i in range(len(data))]
         ax2.bar(x_indices, data['Volume'], color=volume_colors, alpha=0.7, width=0.8)
         ax2.plot(x_indices, data['Volume_SMA_20'], color='blue', linewidth=2, label='Volume SMA 20')
-
         ax2.set_ylabel('Volume', fontsize=12)
         ax2.legend(loc='upper left', fontsize=10)
         ax2.grid(True, alpha=0.3)
 
-        # 3. ATR and CCI Chart
+        # 3. MACD Chart
         ax3 = fig.add_subplot(gs[2])
-        ax3.plot(x_indices, data['ATR'], color='orange', linewidth=2, label='ATR (14)')
-        ax3.set_ylabel('ATR', fontsize=12, color='orange')
-        ax3.tick_params(axis='y', labelcolor='orange')
+        ax3.plot(x_indices, data['MACD'], color='blue', linewidth=2, label='MACD')
+        ax3.plot(x_indices, data['MACD_Signal'], color='red', linewidth=2, label='Signal')
+        macd_hist_colors = ['green' if val >= 0 else 'red' for val in data['MACD_Histogram']]
+        ax3.bar(x_indices, data['MACD_Histogram'], color=macd_hist_colors, alpha=0.6, width=0.8, label='Histogram')
+        ax3.axhline(y=0, color='black', linestyle='-', alpha=0.5)
+        ax3.set_ylabel('MACD', fontsize=12)
         ax3.legend(loc='upper left', fontsize=10)
         ax3.grid(True, alpha=0.3)
 
-        ax3_twin = ax3.twinx()
-        ax3_twin.plot(x_indices, data['CCI'], color='purple', linewidth=2, label='CCI (20)')
-        ax3_twin.set_ylabel('CCI', fontsize=12, color='purple')
-        ax3_twin.tick_params(axis='y', labelcolor='purple')
-        ax3_twin.axhline(y=100, color='red', linestyle='--', alpha=0.7, label='Overbought (100)')
-        ax3_twin.axhline(y=-100, color='green', linestyle='--', alpha=0.7, label='Oversold (-100)')
-        ax3_twin.legend(loc='upper right', fontsize=10)
-
-        # 4. RSI Chart
+        # 4. Stochastic Oscillator
         ax4 = fig.add_subplot(gs[3])
-
-        ax4.plot(x_indices, data['RSI'], color='purple', linewidth=2, label='RSI (14)')
-        ax4.axhline(y=70, color='red', linestyle='--', alpha=0.7, label='Overbought (70)')
-        ax4.axhline(y=30, color='green', linestyle='--', alpha=0.7, label='Oversold (30)')
-        ax4.fill_between(x_indices, 70, 100, alpha=0.1, color='red')
-        ax4.fill_between(x_indices, 0, 30, alpha=0.1, color='green')
-
-        ax4.set_ylabel('RSI', fontsize=12)
+        ax4.plot(x_indices, data['Stoch_K'], color='blue', linewidth=2, label='%K')
+        ax4.plot(x_indices, data['Stoch_D'], color='red', linewidth=2, label='%D')
+        ax4.axhline(y=80, color='red', linestyle='--', alpha=0.7, label='Overbought (80)')
+        ax4.axhline(y=20, color='green', linestyle='--', alpha=0.7, label='Oversold (20)')
+        ax4.fill_between(x_indices, 80, 100, alpha=0.1, color='red')
+        ax4.fill_between(x_indices, 0, 20, alpha=0.1, color='green')
+        ax4.set_ylabel('Stochastic', fontsize=12)
         ax4.set_ylim(0, 100)
         ax4.legend(loc='upper left', fontsize=10)
         ax4.grid(True, alpha=0.3)
 
-        # 5. MACD Chart
+        # 5. ATR and CCI Chart
         ax5 = fig.add_subplot(gs[4])
-
-        ax5.plot(x_indices, data['MACD'], color='blue', linewidth=2, label='MACD')
-        ax5.plot(x_indices, data['MACD_Signal'], color='red', linewidth=2, label='Signal')
-
-        # MACD Histogram
-        colors = ['green' if val >= 0 else 'red' for val in data['MACD_Histogram']]
-        ax5.bar(x_indices, data['MACD_Histogram'], color=colors, alpha=0.6, width=0.8, label='Histogram')
-        ax5.axhline(y=0, color='black', linestyle='-', alpha=0.5)
-
-        ax5.set_ylabel('MACD', fontsize=12)
+        ax5.plot(x_indices, data['ATR'], color='orange', linewidth=2, label='ATR (14)')
+        ax5.set_ylabel('ATR', fontsize=12, color='orange')
+        ax5.tick_params(axis='y', labelcolor='orange')
         ax5.legend(loc='upper left', fontsize=10)
         ax5.grid(True, alpha=0.3)
+        ax5_twin = ax5.twinx()
+        ax5_twin.plot(x_indices, data['CCI'], color='purple', linewidth=2, label='CCI (20)')
+        ax5_twin.set_ylabel('CCI', fontsize=12, color='purple')
+        ax5_twin.tick_params(axis='y', labelcolor='purple')
+        ax5_twin.axhline(y=100, color='red', linestyle='--', alpha=0.7, label='Overbought (100)')
+        ax5_twin.axhline(y=-100, color='green', linestyle='--', alpha=0.7, label='Oversold (-100)')
+        ax5_twin.legend(loc='upper right', fontsize=10)
 
-        # 6. Stochastic Oscillator
+        # 6. RSI Chart
         ax6 = fig.add_subplot(gs[5])
-
-        ax6.plot(x_indices, data['Stoch_K'], color='blue', linewidth=2, label='%K')
-        ax6.plot(x_indices, data['Stoch_D'], color='red', linewidth=2, label='%D')
-        ax6.axhline(y=80, color='red', linestyle='--', alpha=0.7, label='Overbought (80)')
-        ax6.axhline(y=20, color='green', linestyle='--', alpha=0.7, label='Oversold (20)')
-        ax6.fill_between(x_indices, 80, 100, alpha=0.1, color='red')
-        ax6.fill_between(x_indices, 0, 20, alpha=0.1, color='green')
-
-        ax6.set_ylabel('Stochastic', fontsize=12)
+        ax6.plot(x_indices, data['RSI'], color='purple', linewidth=2, label='RSI (14)')
+        ax6.axhline(y=70, color='red', linestyle='--', alpha=0.7, label='Overbought (70)')
+        ax6.axhline(y=30, color='green', linestyle='--', alpha=0.7, label='Oversold (30)')
+        ax6.fill_between(x_indices, 70, 100, alpha=0.1, color='red')
+        ax6.fill_between(x_indices, 0, 30, alpha=0.1, color='green')
+        ax6.set_ylabel('RSI', fontsize=12)
         ax6.set_ylim(0, 100)
         ax6.legend(loc='upper left', fontsize=10)
         ax6.grid(True, alpha=0.3)
 
-        # Format x-axis for all subplots
-        for ax in [ax1, ax2, ax3, ax4, ax5, ax6]:
-            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        # 7. OBV Chart
+        ax7 = fig.add_subplot(gs[6])
+        ax7.plot(x_indices, data['OBV'], color='purple', linewidth=2, label='OBV')
+        ax7.set_ylabel('OBV', fontsize=12)
+        ax7.legend(loc='upper left', fontsize=10)
+        ax7.grid(True, alpha=0.3)
 
+        # Format x-axis for all subplots
+        all_axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7]
+        for ax in all_axes:
+            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
             def format_fn(value, tick_number):
                 if int(value) in x_indices:
                     return data.index[int(value)].strftime('%Y-%m-%d')
                 return ''
-
             ax.xaxis.set_major_formatter(plt.FuncFormatter(format_fn))
             plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
         # Only show x-axis labels on the bottom chart
-        for ax in [ax1, ax2, ax3, ax4, ax5]:
+        for ax in all_axes[:-1]:
             ax.set_xticklabels([])
 
-        ax6.set_xlabel('Date', fontsize=12)
+        all_axes[-1].set_xlabel('Date', fontsize=12)
 
         # Adjust layout and save
         plt.tight_layout()

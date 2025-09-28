@@ -59,7 +59,8 @@ class GeminiStockAdvisor:
         """
         self.data_dir = working_dir
         self.system_prompt = ('You are a professional stock analyst with expertise in technical analysis. '
-                              'Based on the technical indicators and data provided by the user, provide a clear BUY/SELL/HOLD recommendation.')
+                              'Based on the technical indicators and data provided by the user, provide a clear BUY/SELL/HOLD recommendation.'
+                              'The `BB Pos` in the table is for `Bollinger Bands position`')
 
     def find_latest_csv_files(self, symbol):
         """Find the latest technical analysis CSV files"""
@@ -165,18 +166,23 @@ class GeminiStockAdvisor:
         last_90_data['BB_Position'] = ((last_90_data['Close'] - last_90_data['BB_Lower']) /
                                        (last_90_data['BB_Upper'] - last_90_data['BB_Lower'])) * 100
 
-        formatted_data += "| Day | Date       | Close   | RSI  | MACD Hist         | BB Pos  | ATR      | Stoch K  | Stoch D  | CCI      | Volume      |\n"
-        formatted_data += "|-----|------------|---------|------|-------------------|---------|----------|----------|----------|----------|-------------|\n"
+        formatted_data += "| Day | Date       | Close   | RSI  | MACD Hist         | BB Pos  | ATR      | Stoch K  | Stoch D  | CCI      | OBV         | Volume      |\n"
+        formatted_data += "|-----|------------|---------|------|-------------------|---------|----------|----------|----------|----------|-------------|-------------|\n"
 
 
         for i, (date, row) in enumerate(last_90_data.iterrows()):
             trend = 'BULLISH' if row['MACD_Histogram'] > 0 else 'BEARISH'
             formatted_data += (f"| {i + 1:<3} | {date.strftime('%Y-%m-%d')} |"
-                               f" ${row['Close']:<6.2f} | {row['RSI']:<4.1f} |"
+                               f" ${row['Close']:<6.2f} |"
+                               f" {row['RSI']:<4.1f} |"
                                f" {row['MACD_Histogram']:<9.4f} {trend:<7} | "
-                               f" {row['BB_Position']:<6.1f}% | {row['ATR']:<6.4f} |"
-                               f" {row['Stoch_K']:<7.1f} | {row['Stoch_D']:<7.1f} |"
-                               f" {row['CCI']:<6.1f} | {row['Volume']:<11,} |\n")
+                               f" {row['BB_Position']:<6.1f}% |"
+                               f" {row['ATR']:<6.4f} |"
+                               f" {row['Stoch_K']:<7.1f} |"
+                               f" {row['Stoch_D']:<7.1f} |"
+                               f" {row['CCI']:<6.1f} |"
+                               f" {row['OBV']:<11,.0f} |"
+                               f" {row['Volume']:<11,} |\n")
         # print(formatted_data)
         return formatted_data
 
