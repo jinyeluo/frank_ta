@@ -7,10 +7,12 @@ from typing import List, Dict
 
 from dotenv import load_dotenv
 
-from GeminiStockAdvisor import GeminiStockAdvisor, AnalyzedResult
+from DeepseekStockAdvisor import DeepseekStockAdvisor
+from GeminiStockAdvisor import GeminiStockAdvisor
 from GmailSender import GmailSender
+from config import get_symbols, get_llm_vendor, GEMINI, DEEPSEEK
 from get_recommended_action import print_summary
-from get_symbols import get_symbols
+from llm_base import AnalyzedResult
 from yahoo import TechnicalAnalyzer
 
 hidden_frank_ta = Path.home() / '.frank_ta'
@@ -30,13 +32,18 @@ async def main(symbols: List[str], data_dir:Path):
     delete_all_files(data_dir)
 
     load_dotenv(hidden_frank_ta / '.env')
-
     await yahoo_fetch(symbols, data_dir)
-    results = await gemini_advise(symbols, data_dir)
+
+    if get_llm_vendor() == GEMINI:
+        results = await gemini_advise(symbols, data_dir)
+    elif get_llm_vendor() == DEEPSEEK:
+        await deepseek_advise(symbols, data_dir)
+
     print_summary(data_dir)
 
-    # for k, v in results.items():
-    #     await send_emails(k, v, data_dir)
+    if False:
+        for k, v in results.items():  # ignore
+            await send_emails(k, v, data_dir)  # ignore
 
 async def send_emails(symbol, result:AnalyzedResult, data_dir):
     # Initialize Gmail sender
@@ -87,6 +94,30 @@ async def gemini_advise(symbols: List[str], working_dir)-> Dict[str, AnalyzedRes
         print(f"Error: {str(e)}")
         raise e
 
+
+async def deepseek_advise(symbols: List[str], working_dir) -> Dict[str, AnalyzedResult]:
+    """Main function"""
+    try:
+        # Initialize advisor
+        deepseek_api_key = os.environ['DEEPSEEK_API_KEY']
+        advisor = DeepseekStockAdvisor(deepseek_api_key, working_dir)
+
+        print("=" * 60)
+        print("GEMINI STOCK ANALYSIS ADVISOR")
+        print("=" * 60)
+        print(f"Data directory: {advisor.data_dir}")
+
+        results = await advisor.analyze_multiple_stocks(symbols)
+
+        if not results:
+            print("No analysis results generated.")
+        else:
+            print(f"\nCompleted analysis for {len(results)} stocks.")
+        return results
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise e
 
 async def yahoo_fetch(symbols: list[str],  working_dir:Path):
     # You can customize these parameters

@@ -47,14 +47,24 @@ def get_recommendation_action(html_string):
 
 
 def print_summary(file_dir: Path):
-    pattern = os.path.join(file_dir, "*_gemini_recommendations.html")
+    pattern = os.path.join(file_dir, "*_recommendations.html")
     matching_files = glob.glob(pattern)
 
     with open(file_dir / 'summary.txt', 'w', encoding='utf-8') as summary:
         for filename in matching_files:
+            pattern = r'.*\\([A-Z]+)_(([A-Za-z0-9]+))_recommendations.html'
+            match = re.match(pattern, filename)
+            if match:
+                symbol = match[1]
+                llm = match[2]
+            else:
+                symbol = 'unknown'
+                llm = 'unknown'
             with open(filename, 'r', encoding='utf-8') as f:
                 html = f.read()
-                content = f'{get_recommendation_action(html)} from {filename}'
+                content = f'{get_recommendation_action(html)}\t{symbol}\t{llm}'
                 print(content)
                 summary.write(content)
                 summary.write("\n")
+
+# print_summary(Path('/tmp/frank_ta'))
