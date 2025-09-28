@@ -73,8 +73,8 @@ class TechnicalAnalyzer:
     def calculate_rsi(self, data, window=14):
         """Calculate Relative Strength Index"""
         delta = data.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+        gain = (delta.where(delta > 0, 0)).ewm(alpha=1 / window, adjust=False).mean()
+        loss = (-delta.where(delta < 0, 0)).ewm(alpha=1 / window, adjust=False).mean()
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         return rsi
@@ -98,14 +98,17 @@ class TechnicalAnalyzer:
 
         return upper_band, sma, lower_band
 
-    def calculate_stochastic(self, high, low, close, k_window=14, d_window=3):
+    def calculate_stochastic(self, high, low, close, k_window=14, d_window=3, k_smoothing_period=3):
         """Calculate Stochastic Oscillator"""
         lowest_low = low.rolling(window=k_window).min()
         highest_high = high.rolling(window=k_window).max()
         k_percent = 100 * ((close - lowest_low) / (highest_high - lowest_low))
-        d_percent = k_percent.rolling(window=d_window).mean()
 
-        return k_percent, d_percent
+        # Smooth %K
+        k_percent_smoothed = k_percent.rolling(window=k_smoothing_period).mean()
+        d_percent = k_percent_smoothed.rolling(window=d_window).mean()
+
+        return k_percent_smoothed, d_percent
 
     def calculate_atr(self, high, low, close, window=14):
         """Calculate Average True Range"""
@@ -155,7 +158,8 @@ class TechnicalAnalyzer:
         df['BB_Lower'] = bb_lower
 
         # Stochastic
-        stoch_k, stoch_d = self.calculate_stochastic(df['High'], df['Low'], df['Close'])
+        stoch_k, stoch_d = self.calculate_stochastic(df['High'], df['Low'], df['Close'], k_window=10, d_window=3,
+                                                     k_smoothing_period=3)
         df['Stoch_K'] = stoch_k
         df['Stoch_D'] = stoch_d
 

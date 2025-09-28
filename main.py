@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from GeminiStockAdvisor import GeminiStockAdvisor, AnalyzedResult
 from GmailSender import GmailSender
 from get_recommended_action import print_summary
+from get_symbols import get_symbols
 from yahoo import TechnicalAnalyzer
 
 hidden_frank_ta = Path.home() / '.frank_ta'
@@ -76,10 +77,6 @@ async def gemini_advise(symbols: List[str], working_dir)-> Dict[str, AnalyzedRes
 
         results = await advisor.analyze_multiple_stocks(symbols)
 
-        # Save results if requested
-        if results:
-            advisor.save_recommendations(results)
-
         if not results:
             print("No analysis results generated.")
         else:
@@ -124,14 +121,6 @@ async def yahoo_fetch(symbols: list[str],  working_dir:Path):
 
 if __name__ == "__main__":
     working_dir = Path('/tmp/frank_ta')
-    stock_symbols_account_1 = ['ARKK', 'CRWD', 'DOCS', 'EMQQ', 'LIT', 'PGJ', 'NIO', 'XYZ']
-    stock_symbols_account_2 = ['ARKQ', 'BABA', 'TSLA', 'QQQ', 'U', 'OPFI']
-    stock_symbols_account_3 = ['MTZ', 'KWEB', 'CQQQ', 'MP', 'MSTR', 'NVDA']
 
-    stock_symbols = stock_symbols_account_1
-    stock_symbols.extend(stock_symbols_account_2)
-    stock_symbols.extend(stock_symbols_account_3)
-
-    # stock_symbols = ['ARKK', 'CRWD', 'DOCS', 'EMQQ', 'LIT', 'BABA']
-    asyncio.run(main(stock_symbols, working_dir))
-
+    # stock_symbols = ['CRWD']
+    asyncio.run(main(get_symbols(), working_dir))
