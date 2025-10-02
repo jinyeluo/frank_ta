@@ -4,6 +4,32 @@ import re
 from pathlib import Path
 
 
+def get_recommendation_action_direct(html_string):
+    if 'recommendation buy' in html_string:
+        return 'BUY'
+    elif 'recommendation hold' in html_string:
+        return 'HOLD'
+    elif 'recommendation sell' in html_string:
+        return 'SELL'
+    return None
+
+
+def get_recommendation_action_direct2(html_string):
+    pattern = r'RECOMMENDATION: (.*?)\>(HOLD|BUY|SELL)\<'
+    match = re.match(pattern, html_string)
+    if match:
+        return match[2]
+    return None
+
+
+def get_recommendation_action_direct3(html_string):
+    # Step 5: Look for our target values >SELL<
+    value_pattern = r'\>(HOLD|BUY|SELL)\<'
+    value_match = re.search(value_pattern, html_string, re.IGNORECASE)
+
+    if value_match:
+        return value_match.group(1).upper()
+
 def get_recommendation_action(html_string):
     """
     Most robust extraction that handles various formats:
@@ -11,24 +37,24 @@ def get_recommendation_action(html_string):
     - Different class combinations
     - Case insensitive matching
     """
-    if 'recommendation buy' in html_string:
-        return 'BUY'
-    elif 'recommendation hold' in html_string:
-        return 'HOLD'
-    elif 'recommendation sell' in html_string:
-        return 'SELL'
+    action = get_recommendation_action_direct(html_string)
+    if action:
+        return action
 
-    pattern = r'RECOMMENDATION: (.*?)>(HOLD|BUY|SELL)<'
-    match = re.match(pattern, html_string)
-    if match:
-        return match[2]
+    action = get_recommendation_action_direct2(html_string)
+    if action:
+        return action
+
+    action = get_recommendation_action_direct3(html_string)
+    if action:
+        return action
 
     # Step 1: Find div with recommendation class
     div_pattern = r'<div[^>]*class="[^"]*recommendation[^"]*"[^>]*>(.*?)(</div>|$|</h3>)'
     div_match = re.search(div_pattern, html_string, re.DOTALL | re.IGNORECASE)
 
     if not div_match:
-        return None
+        return 'Unknown'
 
     # Step 2: Get the content inside the div
     div_content = div_match.group(1)
@@ -42,7 +68,6 @@ def get_recommendation_action(html_string):
 
     if value_match:
         return value_match.group(1).upper()
-
     return 'Unknown'
 
 
@@ -52,7 +77,7 @@ def print_summary(file_dir: Path):
 
     with open(file_dir / 'summary.txt', 'w', encoding='utf-8') as summary:
         for filename in matching_files:
-            pattern = r'.*\\([A-Z]+)_(([A-Za-z0-9]+))_recommendations.html'
+            pattern = r'.*\\([A-Za-z0-9\.]+)_(([A-Za-z0-9]+))_recommendations.html'
             match = re.match(pattern, filename)
             if match:
                 symbol = match[1]
@@ -67,4 +92,5 @@ def print_summary(file_dir: Path):
                 summary.write(content)
                 summary.write("\n")
 
-# print_summary(Path('/tmp/frank_ta'))
+
+print_summary(Path('/tmp/frank_ta'))

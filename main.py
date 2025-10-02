@@ -32,6 +32,7 @@ async def main(symbols: List[str], data_dir:Path):
     delete_all_files(data_dir)
 
     load_dotenv(hidden_frank_ta / '.env')
+    symbols.sort()
     await yahoo_fetch(symbols, data_dir)
 
     if get_llm_vendor() == GEMINI:
