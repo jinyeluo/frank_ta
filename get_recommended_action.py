@@ -5,11 +5,12 @@ from pathlib import Path
 
 
 def get_recommendation_action_direct(html_string):
-    if 'recommendation buy' in html_string:
+    html_string = html_string.lower()
+    if 'recommendation buy' in html_string or 'recommendation: buy' in html_string:
         return 'BUY'
-    elif 'recommendation hold' in html_string:
+    elif 'recommendation hold' in html_string or 'recommendation: hold' in html_string:
         return 'HOLD'
-    elif 'recommendation sell' in html_string:
+    elif 'recommendation sell' in html_string or 'recommendation: sell' in html_string:
         return 'SELL'
     return None
 
@@ -77,7 +78,7 @@ def print_summary(file_dir: Path):
 
     with open(file_dir / 'summary.txt', 'w', encoding='utf-8') as summary:
         for filename in matching_files:
-            pattern = r'.*\\([A-Za-z0-9\.]+)_(([A-Za-z0-9]+))_recommendations.html'
+            pattern = r'.*\\([A-Za-z0-9-\.]+)_(([A-Za-z0-9]+))_recommendations.html'
             match = re.match(pattern, filename)
             if match:
                 symbol = match[1]
@@ -92,5 +93,4 @@ def print_summary(file_dir: Path):
                 summary.write(content)
                 summary.write("\n")
 
-
-print_summary(Path('/tmp/frank_ta'))
+# print_summary(Path('/tmp/frank_ta'))
