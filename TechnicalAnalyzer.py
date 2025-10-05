@@ -6,14 +6,12 @@ Downloads stock data and calculates technical indicators using yfinance
 
 import os
 import warnings
-from datetime import datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import yfinance as yf
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MaxNLocator
 
@@ -23,44 +21,8 @@ sns.set_palette("husl")
 
 
 class TechnicalAnalyzer:
-    def __init__(self, period, data_dir:Path):
-        """
-        Initialize the Technical Analyzer
-
-        Args:
-            period (str): Time period for data download ('1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max')
-        """
-        self.period = period
+    def __init__(self, data_dir: Path):
         self.data_dir = data_dir
-
-    def download_stock_data(self, symbols):
-        """Download stock data for given symbols"""
-        print(f"Downloading data for {len(symbols)} symbols...")
-
-        stock_data = {}
-        failed_symbols = []
-
-        for symbol in symbols:
-            try:
-                ticker = yf.Ticker(symbol)
-                data = ticker.history(period=self.period)
-
-                if data.empty:
-                    print(f"No data found for {symbol}")
-                    failed_symbols.append(symbol)
-                    continue
-
-                stock_data[symbol] = data
-                print(f"✓ Downloaded {symbol}: {len(data)} rows")
-
-            except Exception as e:
-                print(f"✗ Failed to download {symbol}: {str(e)}")
-                failed_symbols.append(symbol)
-
-        if failed_symbols:
-            print(f"\nFailed to download: {', '.join(failed_symbols)}")
-
-        return stock_data
 
     def calculate_sma(self, data, window):
         """Calculate Simple Moving Average"""
@@ -295,10 +257,12 @@ class TechnicalAnalyzer:
         all_axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7]
         for ax in all_axes:
             ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
             def format_fn(value, tick_number):
                 if int(value) in x_indices:
                     return data.index[int(value)].strftime('%Y-%m-%d')
                 return ''
+
             ax.xaxis.set_major_formatter(plt.FuncFormatter(format_fn))
             plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
@@ -370,62 +334,3 @@ class TechnicalAnalyzer:
         }
 
         return summary
-
-    def run_analysis(self, symbols):
-        """Run the complete technical analysis"""
-        print(f"Starting Technical Analysis for {len(symbols)} symbols")
-        print(f"Period: {self.period}")
-        print(f"Output directory: {self.data_dir}")
-        print("-" * 50)
-
-        # Download data
-        stock_data = self.download_stock_data(symbols)
-
-        if not stock_data:
-            print("No data downloaded. Exiting.")
-            return
-
-        print(f"\nProcessing {len(stock_data)} stocks...")
-        print("-" * 50)
-
-        processed_files = []
-        chart_files = []
-        summary_data = []
-
-        # Process each stock
-        for symbol, data in stock_data.items():
-            try:
-                # Calculate technical indicators
-                processed_data = self.add_technical_indicators(data, symbol)
-
-                # Create technical chart
-                chart_path = self.create_technical_chart(processed_data, symbol)
-                chart_files.append(chart_path)
-
-                # Save to CSV
-                filepath = self.save_to_csv(processed_data, symbol)
-                processed_files.append(filepath)
-
-                # Generate summary
-                summary = self.generate_summary_stats(processed_data, symbol)
-                summary_data.append(summary)
-
-            except Exception as e:
-                print(f"✗ Error processing {symbol}: {str(e)}")
-                import traceback
-                traceback.print_exc()
-
-        # Save summary file
-        if summary_data:
-            summary_df = pd.DataFrame(summary_data)
-            summary_file = os.path.join(self.data_dir, f"stock_summary_{datetime.now().strftime('%Y%m%d')}.csv")
-            summary_df.to_csv(summary_file, index=False)
-            print(f"\n✓ Summary saved to {summary_file}")
-
-        print(f"\nAnalysis complete! Processed {len(processed_files)} stocks.")
-        print(f"Generated {len(chart_files)} charts.")
-        print(f"Files saved to: {self.data_dir}")
-
-        return processed_files, chart_files, summary_data
-
-
