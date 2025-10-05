@@ -151,6 +151,71 @@ class TechnicalAnalyzer:
 
         return df
 
+    def add_technical_indicators_action(self, data, symbol):
+        """Adds technical indicators and actions."""
+        df_with_indicators = self.add_technical_indicators(data, symbol)
+        df_with_actions = self.add_actions(df_with_indicators)
+        return df_with_actions
+
+    def add_actions(self, df):
+        """
+        Adds a new column 'action' to the DataFrame based on MACD_Histogram trends.
+        Rules:
+        1. buy: No previous action or last action is 'cover-short', and MACD_Histogram increased for the last 2 periods.
+        2. sell: Last action was 'buy', and MACD_Histogram decreased for the last period.
+        3. short: No previous action or last action is 'sell', and MACD_Histogram decreased for the last 2 periods.
+        4. cover-short: Last action was 'short', and MACD_Histogram increased for the last period.
+        """
+        macd_hist_col = 'MACD_Histogram'
+
+        if macd_hist_col not in df.columns:
+            raise ValueError(f"'{macd_hist_col}' not found in DataFrame. Please run 'add_technical_indicators' first.")
+
+        df = df.copy()
+        df['action'] = ''
+        last_action = ''
+
+        for i in range(3, len(df)):
+            hist_n_1 = df[macd_hist_col].iloc[i - 1]
+            hist_n_2 = df[macd_hist_col].iloc[i - 2]
+            hist_n_3 = df[macd_hist_col].iloc[i - 3]
+
+            def is_significant_change(current, previous, is_increase):
+                if previous == 0:
+                    return (is_increase and current > 0) or (not is_increase and current < 0)
+
+                change_pct = (current - previous) / abs(previous)
+
+                if is_increase:
+                    return change_pct > 0.01
+                else:
+                    return change_pct < -0.01
+
+            # Conditions based on MACD Histogram trends
+            goes_up_last_two = is_significant_change(hist_n_1, hist_n_2, is_increase=True) and \
+                               is_significant_change(hist_n_2, hist_n_3, is_increase=True)
+            goes_down_last_two = is_significant_change(hist_n_1, hist_n_2, is_increase=False) and \
+                                 is_significant_change(hist_n_2, hist_n_3, is_increase=False)
+            goes_up_last_one = is_significant_change(hist_n_1, hist_n_2, is_increase=True)
+            goes_down_last_one = is_significant_change(hist_n_1, hist_n_2, is_increase=False)
+
+            action_to_set = ''
+
+            if (last_action == '' or last_action in ['cover-short', 'sell']) and goes_up_last_two:
+                action_to_set = 'buy'
+            elif last_action == 'buy' and goes_down_last_one:
+                action_to_set = 'sell'
+            elif (last_action == '' or last_action in ['cover-short', 'sell']) and goes_down_last_two:
+                action_to_set = 'short'
+            elif last_action == 'short' and goes_up_last_one:
+                action_to_set = 'cover-short'
+
+            if action_to_set:
+                df.at[df.index[i], 'action'] = action_to_set
+                last_action = action_to_set
+
+        return df
+
     def create_technical_chart(self, data, symbol):
         """Create comprehensive technical analysis chart"""
         print(f"Creating chart for {symbol}...")

@@ -12,8 +12,6 @@ from GeminiStockAdvisor import GeminiStockAdvisor
 from GmailSender import GmailSender
 from TechnicalAnalyzer import TechnicalAnalyzer
 from YahooFinance import YahooFinance
-from config import get_llm_vendor, GEMINI, DEEPSEEK
-from get_recommended_action import print_summary
 from llm_base import AnalyzedResult
 
 hidden_frank_ta = Path.home() / '.frank_ta'
@@ -39,19 +37,14 @@ class Orchestrator:
 
         load_dotenv(hidden_frank_ta / '.env')
         symbols.sort()
-        await self.yahoo_fetch(symbols)
+        await self.yahoo_fetch_analyze(symbols)
 
-        if get_llm_vendor() == GEMINI:
-            results = await self.gemini_advise(symbols)
-        elif get_llm_vendor() == DEEPSEEK:
-            await self.deepseek_advise(symbols)
-
-        print_summary(self.directory)
-
-        if False:
-            for k, v in results.items():  # ignore
-                await send_emails(k, v, data_dir)  # ignore
-            pass
+        # if get_llm_vendor() == GEMINI:
+        #     results = await self.gemini_advise(symbols)
+        # elif get_llm_vendor() == DEEPSEEK:
+        #     await self.deepseek_advise(symbols)
+        #
+        # print_summary(self.directory)
 
     async def send_emails(self, symbol, result: AnalyzedResult):
         # Initialize Gmail sender
@@ -149,7 +142,7 @@ class Orchestrator:
         for symbol, data in stock_data.items():
             try:
                 # Calculate technical indicators
-                processed_data = analyzer.add_technical_indicators(data, symbol)
+                processed_data = analyzer.add_technical_indicators_action(data, symbol)
 
                 # Create technical chart
                 chart_path = analyzer.create_technical_chart(processed_data, symbol)
@@ -181,7 +174,7 @@ class Orchestrator:
 
         return processed_files, chart_files, summary_data
 
-    async def yahoo_fetch(self, symbols: list[str]):
+    async def yahoo_fetch_analyze(self, symbols: list[str]):
 
         # Create analyzer
         yahoo = YahooFinance(period=self.period, interval=self.interval, data_dir=self.directory)
