@@ -12,6 +12,8 @@ from GeminiStockAdvisor import GeminiStockAdvisor
 from GmailSender import GmailSender
 from TechnicalAnalyzer import TechnicalAnalyzer
 from YahooFinance import YahooFinance
+from config import get_llm_vendor, GEMINI, DEEPSEEK
+from get_recommended_action import print_summary
 from llm_base import AnalyzedResult
 
 hidden_frank_ta = Path.home() / '.frank_ta'
@@ -39,12 +41,12 @@ class Orchestrator:
         symbols.sort()
         await self.yahoo_fetch_analyze(symbols)
 
-        # if get_llm_vendor() == GEMINI:
-        #     results = await self.gemini_advise(symbols)
-        # elif get_llm_vendor() == DEEPSEEK:
-        #     await self.deepseek_advise(symbols)
-        #
-        # print_summary(self.directory)
+        if get_llm_vendor() == GEMINI:
+            results = await self.gemini_advise(symbols)
+        elif get_llm_vendor() == DEEPSEEK:
+            await self.deepseek_advise(symbols)
+
+        print_summary(self.directory)
 
     async def send_emails(self, symbol, result: AnalyzedResult):
         # Initialize Gmail sender
