@@ -43,14 +43,41 @@ class AnalyzedResult:
 
 class LLMBase:
     def __init__(self, working_dir: Path, vendor: str):
-        super().__init__()
         """
         Initialize the Gemini Stock Advisor
         """
+        super().__init__()
+        self.period_length = 180
+
         self.data_dir = working_dir
-        self.system_prompt = ('You are a professional stock analyst with expertise in technical analysis. '
-                              'Based on the technical indicators and data provided by the user, provide a clear BUY/SELL/HOLD recommendation.'
-                              'The `BB Pos` in the table is for `Bollinger Bands position`')
+        self.system_prompt = (
+            'You are a professional stock analyst with expertise in technical analysis. '
+            'Based on the technical indicators and data provided by the user, provide a clear BUY/SELL/HOLD recommendation.'
+            'The `BB Pos` in the table is for `Bollinger Bands position`\n'
+            '## You will:'
+            '1. Analyze the technical indicators and price patterns to identify the stock’s momentum, trend strength, and volatility profile.\n'
+            "2. Evaluate the volatility-adjusted performance — i.e., consider whether the stock’s movement is relatively more or less volatile than average.\n"
+            "3. Validate your prediction by performing a retrospective check:\n"
+            "  - Assume your model makes a buy/sell/hold prediction for each past week.\n"
+            "  - Compare that prediction with what actually happened afterward (e.g., price up/down by 3–5% in next week).\n"
+            "  - Briefly summarize whether your signals would have worked historically.\n"
+            "4. Update your conclusion based on this validation."
+        )
+
+        self.system_prompt += """
+Please analyze the data and provide:
+
+1. **RECOMMENDATION**: Clearly state BUY, SELL, or HOLD
+2. **CONFIDENCE**: Rate your confidence (1-10 scale)
+3. **KEY REASONS**: List 3-4 main technical factors supporting your decision
+4. **RISK LEVEL**: Assess the current risk (LOW/MEDIUM/HIGH)
+5. **TIME HORIZON**: Suggest if this is for short-term (days), medium-term (weeks), or long-term (months)
+6. **KEY LEVELS**: Mention important support/resistance levels to watch
+
+Keep your analysis concise but thorough. Focus on the technical indicators provided and their current signals.
+
+Make your answer in html format so that I can email it
+        """
         self.vendor = vendor
 
     def build_user_request(self, symbol, latest_data, recent_data, full_data):
@@ -98,15 +125,15 @@ class LLMBase:
 """
 
         # Add recent price trend in a markdown table
-        last_90_data = full_data.tail(90).copy()
+        last_period_data = full_data.tail(self.period_length).copy()
         # Calculate BB Position for the last 90 days
-        last_90_data['BB_Position'] = ((last_90_data['Close'] - last_90_data['BB_Lower']) /
-                                       (last_90_data['BB_Upper'] - last_90_data['BB_Lower'])) * 100
+        last_period_data['BB_Position'] = ((last_period_data['Close'] - last_period_data['BB_Lower']) /
+                                           (last_period_data['BB_Upper'] - last_period_data['BB_Lower'])) * 100
 
         formatted_data += "| Day | Date       | Close   | RSI  | MACD Hist         | BB Pos  | ATR      | Stoch K  | Stoch D  | CCI      | OBV         | Volume      |\n"
         formatted_data += "|-----|------------|---------|------|-------------------|---------|----------|----------|----------|----------|-------------|-------------|\n"
 
-        for i, (date, row) in enumerate(last_90_data.iterrows()):
+        for i, (date, row) in enumerate(last_period_data.iterrows()):
             trend = 'BULLISH' if row['MACD_Histogram'] > 0 else 'BEARISH'
             formatted_data += (f"| {i + 1:<3} | {date.strftime('%Y-%m-%d')} |"
                                f" ${row['Close']:<6.2f} |"
@@ -129,19 +156,6 @@ class LLMBase:
 Given the data below: 
 
 {formatted_data}
-
-Please analyze this data and provide:
-
-1. **RECOMMENDATION**: Clearly state BUY, SELL, or HOLD
-2. **CONFIDENCE**: Rate your confidence (1-10 scale)
-3. **KEY REASONS**: List 3-4 main technical factors supporting your decision
-4. **RISK LEVEL**: Assess the current risk (LOW/MEDIUM/HIGH)
-5. **TIME HORIZON**: Suggest if this is for short-term (days), medium-term (weeks), or long-term (months)
-6. **KEY LEVELS**: Mention important support/resistance levels to watch
-
-Keep your analysis concise but thorough. Focus on the technical indicators provided and their current signals.
-
-Make your answer in html format so that I can email it
 """
         return await self.llm_chat(prompt)
 
